@@ -9,7 +9,7 @@ const enrollCourse = async (req, res) => {
 
         if (!course || !user) {
             console.log(course, user)
-            return res.status(404).json({ msg: "User or course doesn't exist!" })
+            return next(new Error(404, "User or course doesn't exist!"));
         }
 
         const existingEnrollment = await Enrollment.findOne({
@@ -18,7 +18,7 @@ const enrollCourse = async (req, res) => {
         });
         if (existingEnrollment) {
             console.log(existingEnrollment)
-            return res.status(409).json({ msg: "This student already enrolled this course" });
+            return next(new Error(409, "This student already enrolled this course"));
         }
 
         const newEnrollment = await Enrollment.create({
@@ -35,7 +35,7 @@ const enrollCourse = async (req, res) => {
             newEnrollment: populatedEnrollment
         })
     } catch (error) {
-        res.status(500).json({ msg: "Error enrolling course", error: error.message });
+        return next(new Error(500, "Error enrolling course"))
     }
 }
 
@@ -50,13 +50,13 @@ const getEnrollments = async (req, res) => {
             .populate('course')
             .populate('user');
 
-        if (!enrolledCourses || enrolledCourses.length === 0) {
-            return res.status(404).json({ msg: "No enrollments found!" })
-        }
+        // if (!enrolledCourses || enrolledCourses.length === 0) {
+        //     return res.status(200).json({ msg: "No enrollments found!" })
+        // }
 
         return res.status(200).json(enrolledCourses)
     } catch (error) {
-        res.status(500).json({ msg: "Error getting enrolled courses", error: error.message });
+        return next(new Error(500, "Error getting enrolled courses"))
     }
 }
 

@@ -1,9 +1,10 @@
 const User = require("../models/User")
 const hashPassword = require('../utils/hash_password');
 const generateToken = require('../utils/jwt_sign');
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcryptjs');
+const AppError = require('../temp/appError')
 
-const userRegister = async (req, res) => {
+const userRegister = async (req, res, next) => {
     try {
         const userInfo = { ...req.body }
 
@@ -13,7 +14,8 @@ const userRegister = async (req, res) => {
 
         const existingUser = await User.exists({ email: userInfo.email })
         if (existingUser) {
-            return res.status(409).json({ msg: "Email existed" })
+            return next(new AppError("Email already existed", 409))
+            // Note: when return next(errObject), express will find middlewares which have err param to handle error
         }
 
         const hashedPassword = await hashPassword(userInfo.password);
@@ -21,7 +23,7 @@ const userRegister = async (req, res) => {
         const createdUser = await User.create({
             username: userInfo.username,
             email: userInfo.email,
-            password: hashedPassword, 
+            password: hashedPassword,
             role: userInfo.role
         })
 
@@ -33,10 +35,7 @@ const userRegister = async (req, res) => {
             newUser: userResponse
         })
     } catch (error) {
-        return res.status(500).json({
-            msg: "Error creating user",
-            error: error.message
-        })
+        return next(new Error(500, "Error creating user"))
     }
 }
 
@@ -50,26 +49,23 @@ const userLogin = async (req, res) => {
 
         const user = await User.findOne({ email: userInfo.email })
         if (!user) {
-            return res.status(400).json({ msg: "Email or password's incorrect!" })
+            return next(new Error(400, "Email or password's incorrect!"))
         }
 
         const isValidPassword = bcrypt.compareSync(userInfo.password, user.password);
         if (!isValidPassword) {
-            return res.status(400).json({ msg: "Email or password's incorrect!" })
+            return next(new Error(400, "Email or password's incorrect!"))
         }
 
         const token = await generateToken(user._id);
         if (!token) {
-            return res.status(500).json({ msg: "Error generating token" })
+            return next(new Error(500, "Error generating token"))
         }
 
         return res.status(200).json({ token })
 
     } catch (error) {
-        return res.status(500).json({
-            msg: "Error login user",
-            error: error.message
-        })
+        return next(new Error(500, "Error login user"))
     }
 }
 
